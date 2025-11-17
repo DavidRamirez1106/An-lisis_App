@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block header %}Capítulo 3: Interpolación{% endblock %}
+
+{% block content %}
+<div class="chapter-container">
+    <div class="info-section">
+        <h2>Instrucciones</h2>
+        <ul>
+            <li>Ingresa los valores de x separados por espacios</li>
+            <li>Ingresa los valores de y separados por espacios</li>
+            <li>Ejemplo: x = <code>1 2 3 4</code>, y = <code>2 5 10 17</code></li>
+            <li>Máximo 8 puntos de datos</li>
+            <li>El número de valores en x debe ser igual al número de valores en y</li>
+            <li>Opcionalmente ingresa un valor de x para evaluar el polinomio interpolado</li>
+            <li>Puedes generar un informe comparativo opcional marcando la casilla correspondiente</li>
+        </ul>
+    </div>
+
+    <div class="form-section">
+        <h2>Parámetros</h2>
+        <form id="methodForm">
+            <div class="form-group">
+                <label for="method">Método:</label>
+                <select id="method" name="method" required>
+                    <option value="vandermonde">Vandermonde</option>
+                    <option value="newton_interpolating">Newton Interpolante</option>
+                    <option value="lagrange">Lagrange</option>
+                    <option value="linear_spline">Spline Lineal</option>
+                    <option value="cubic_spline">Spline Cúbico</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="x_data">Valores de x:</label>
+                <input type="text" id="x_data" name="x_data" placeholder="1 2 3 4" required>
+                <small>Separados por espacios (máximo 8 valores)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="y_data">Valores de y:</label>
+                <input type="text" id="y_data" name="y_data" placeholder="2 5 10 17" required>
+                <small>Separados por espacios (mismo número de valores que x)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="x_eval">Valor de x para evaluar (opcional):</label>
+                <input type="number" id="x_eval" name="x_eval" step="any">
+                <small>Si se especifica, se mostrará el valor interpolado en ese punto</small>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="generate_report" name="generate_report">
+                    Generar informe comparativo
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Ejecutar Método</button>
+        </form>
+    </div>
+
+    <div id="result" class="result-section" style="display: none;"></div>
+    <div id="report" class="result-section" style="display: none;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('methodForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const params = {
+        x_data: formData.get('x_data'),
+        y_data: formData.get('y_data'),
+        x_eval: formData.get('x_eval') || ''
+    };
+
+    const method = formData.get('method');
+    const generate_report = document.getElementById('generate_report').checked;
+
+    fetch('/api/chapter3/execute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            method: method,
+            params: params,
+            generate_report: generate_report
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayResult(data.result, method);
+            if (data.result.comparison) {
+                displayReport(data.result.comparison);
+            }
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+});
+
+function displayResult(result, method) {
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display = 'block';
+    
+    let html = `<h2>Resultados</h2>`;
+    
+    if (result.polynomial) {
+        html += `<h3>Polinomio Interpolado</h3>`;
+        if (result.polynomial.includes('por partes')) {
+            html += `<p><strong>${result.polynomial}</strong></p>`;
+            if (result.pieces) {
+                html += `<table class="results-table"><thead><tr><th>Intervalo</th><th>Ecuación</th></tr></thead><tbody>`;
+                result.pieces.forEach(piece => {
+                    html += `<tr>`;
+                    html += `<td>[${piece.interval[0]}, ${piece.interval[1]}]</td>`;
+                    html += `<td><code>${piece.equation}</code></td>`;
+                    html += `</tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+        } else {
+            html += `<p><code>P(x) = ${result.polynomial}</code></p>`;
+        }
+    }
+    
+    if (result.coefficients) {
+        html += `<p><strong>Coeficientes:</strong> [${result.coefficients.map(c => c.toFixed(8)).join(', ')}]</p>`;
+    }
+    
+    if (result.errors && result.errors.length > 0) {
+        html += `<h3>Errores en los Puntos de Datos</h3>`;
+        html += `<table class="results-table"><thead><tr><th>x</th><th>y Verdadero</th><th>y Interpolado</th><th>Error Absoluto</th><th>Error Relativo</th></tr></thead><tbody>`;
+        result.errors.forEach(err => {
+            html += `<tr>`;
+            html += `<td>${err.x}</td>`;
+            html += `<td>${err.y_true}</td>`;
+            html += `<td>${err.y_pred.toFixed(8)}</td>`;
+            html += `<td>${err.absolute_error.toExponential(4)}</td>`;
+            html += `<td>${err.relative_error.toExponential(4)}</td>`;
+            html += `</tr>`;
+        });
+        html += `</tbody></table>`;
+    }
+    
+    if (result.plot) {
+        html += `<h3>Gráfica</h3>`;
+        html += `<img src="data:image/png;base64,${result.plot}" alt="Gráfica">`;
+    }
+    
+    resultDiv.innerHTML = html;
+}
+
+function displayReport(comparison) {
+    const reportDiv = document.getElementById('report');
+    reportDiv.style.display = 'block';
+    
+    let html = `<h2>Informe Comparativo</h2>`;
+    html += `<table class="results-table"><thead><tr>`;
+    html += `<th>Método</th><th>Error Abs. Promedio</th><th>Error Rel. Promedio</th><th>Error Abs. Máximo</th><th>Error Rel. Máximo</th></tr></thead><tbody>`;
+    
+    for (const method in comparison) {
+        if (method !== 'best_method') {
+            const data = comparison[method];
+            if (data.error) {
+                html += `<tr><td>${method}</td><td colspan="4">Error: ${data.error}</td></tr>`;
+            } else {
+                html += `<tr>`;
+                html += `<td>${method}</td>`;
+                html += `<td>${data.mean_absolute_error ? data.mean_absolute_error.toExponential(4) : 'N/A'}</td>`;
+                html += `<td>${data.mean_relative_error ? data.mean_relative_error.toExponential(4) : 'N/A'}</td>`;
+                html += `<td>${data.max_absolute_error ? data.max_absolute_error.toExponential(4) : 'N/A'}</td>`;
+                html += `<td>${data.max_relative_error ? data.max_relative_error.toExponential(4) : 'N/A'}</td>`;
+                html += `</tr>`;
+            }
+        }
+    }
+    
+    html += `</tbody></table>`;
+    
+    if (comparison.best_method) {
+        html += `<p><strong>Mejor método:</strong> ${comparison.best_method}</p>`;
+    }
+    
+    reportDiv.innerHTML = html;
+}
+</script>
+{% endblock %}
+

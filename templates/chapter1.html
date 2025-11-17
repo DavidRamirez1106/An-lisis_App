@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block header %}Capítulo 1: Búsqueda de Raíces{% endblock %}
+
+{% block content %}
+<div class="chapter-container">
+    <div class="info-section">
+        <h2>Instrucciones</h2>
+        <ul>
+            <li>Ingresa una función algebraica usando la variable <code>x</code></li>
+            <li>Ejemplos: <code>x**2 - 4</code>, <code>sin(x) - x</code>, <code>exp(x) - 2*x</code></li>
+            <li>Para métodos que requieren derivada, puedes usar el botón "Calcular Derivada" o ingresarla manualmente</li>
+            <li>Selecciona el método numérico y los parámetros requeridos</li>
+            <li>Puedes generar un informe comparativo opcional marcando la casilla correspondiente</li>
+        </ul>
+    </div>
+
+    <div class="form-section">
+        <h2>Parámetros</h2>
+        <form id="methodForm">
+            <div class="form-group">
+                <label for="expression">Función f(x):</label>
+                <input type="text" id="expression" name="expression" placeholder="x**2 - 4" required>
+                <button type="button" class="btn btn-secondary" onclick="calculateDerivative()">Calcular Derivada</button>
+            </div>
+
+            <div class="form-group">
+                <label for="method">Método:</label>
+                <select id="method" name="method" required>
+                    <option value="bisection">Bisección</option>
+                    <option value="false_position">Regla Falsa</option>
+                    <option value="fixed_point">Punto Fijo</option>
+                    <option value="newton">Newton-Raphson</option>
+                    <option value="secant">Secante</option>
+                    <option value="multiple_roots">Raíces Múltiples (Newton)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="intervalGroup">
+                <label for="a">a (inicio del intervalo):</label>
+                <input type="number" id="a" name="a" step="any">
+                <label for="b">b (fin del intervalo):</label>
+                <input type="number" id="b" name="b" step="any">
+            </div>
+
+            <div class="form-group" id="x0Group" style="display: none;">
+                <label for="x0">x₀ (valor inicial):</label>
+                <input type="number" id="x0" name="x0" step="any">
+            </div>
+
+            <div class="form-group" id="x1Group" style="display: none;">
+                <label for="x1">x₁ (segundo valor inicial):</label>
+                <input type="number" id="x1" name="x1" step="any">
+            </div>
+
+            <div class="form-group" id="gExpressionGroup" style="display: none;">
+                <label for="g_expression">Función g(x) para punto fijo:</label>
+                <input type="text" id="g_expression" name="g_expression" placeholder="x - f(x)">
+                <small>Si no se especifica, se usará la función principal</small>
+            </div>
+
+            <div class="form-group" id="dfExpressionGroup" style="display: none;">
+                <label for="df_expression">Derivada f'(x):</label>
+                <input type="text" id="df_expression" name="df_expression">
+                <button type="button" class="btn btn-secondary" onclick="calculateDerivativeForInput()">Auto-calcular</button>
+            </div>
+
+            <div class="form-group" id="d2fExpressionGroup" style="display: none;">
+                <label for="d2f_expression">Segunda derivada f''(x):</label>
+                <input type="text" id="d2f_expression" name="d2f_expression">
+                <button type="button" class="btn btn-secondary" onclick="calculateSecondDerivative()">Auto-calcular</button>
+            </div>
+
+            <div class="form-group">
+                <label for="error_type">Tipo de error:</label>
+                <select id="error_type" name="error_type">
+                    <option value="relative">Relativo</option>
+                    <option value="absolute">Absoluto</option>
+                    <option value="condition">Condición</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="tol">Tolerancia:</label>
+                <input type="number" id="tol" name="tol" value="1e-6" step="any" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="max_iter">Iteraciones máximas:</label>
+                <input type="number" id="max_iter" name="max_iter" value="100" min="1">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="generate_report" name="generate_report">
+                    Generar informe comparativo
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Ejecutar Método</button>
+        </form>
+    </div>
+
+    <div id="derivativeResult" class="result-section" style="display: none;"></div>
+    <div id="result" class="result-section" style="display: none;"></div>
+    <div id="report" class="result-section" style="display: none;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const methodSelect = document.getElementById('method');
+const intervalGroup = document.getElementById('intervalGroup');
+const x0Group = document.getElementById('x0Group');
+const x1Group = document.getElementById('x1Group');
+const gExpressionGroup = document.getElementById('gExpressionGroup');
+const dfExpressionGroup = document.getElementById('dfExpressionGroup');
+const d2fExpressionGroup = document.getElementById('d2fExpressionGroup');
+
+methodSelect.addEventListener('change', function() {
+    // Ocultar todos los grupos primero
+    intervalGroup.style.display = 'none';
+    x0Group.style.display = 'none';
+    x1Group.style.display = 'none';
+    gExpressionGroup.style.display = 'none';
+    dfExpressionGroup.style.display = 'none';
+    d2fExpressionGroup.style.display = 'none';
+
+    // Mostrar grupos según el método seleccionado
+    if (this.value === 'bisection' || this.value === 'false_position') {
+        intervalGroup.style.display = 'block';
+    } else if (this.value === 'fixed_point') {
+        x0Group.style.display = 'block';
+        gExpressionGroup.style.display = 'block';
+    } else if (this.value === 'newton') {
+        x0Group.style.display = 'block';
+        dfExpressionGroup.style.display = 'block';
+    } else if (this.value === 'secant') {
+        x0Group.style.display = 'block';
+        x1Group.style.display = 'block';
+    } else if (this.value === 'multiple_roots') {
+        x0Group.style.display = 'block';
+        dfExpressionGroup.style.display = 'block';
+        d2fExpressionGroup.style.display = 'block';
+    }
+});
+
+function calculateDerivative() {
+    const expression = document.getElementById('expression').value;
+    if (!expression) {
+        alert('Por favor ingresa una función primero');
+        return;
+    }
+
+    fetch('/api/chapter1/derivative', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({expression: expression})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('derivativeResult').style.display = 'block';
+            document.getElementById('derivativeResult').innerHTML = 
+                `<h3>Derivada calculada:</h3><p><code>f'(x) = ${data.derivative}</code></p>`;
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function calculateDerivativeForInput() {
+    const expression = document.getElementById('expression').value;
+    if (!expression) {
+        alert('Por favor ingresa una función primero');
+        return;
+    }
+
+    fetch('/api/chapter1/derivative', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({expression: expression})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('df_expression').value = data.derivative;
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function calculateSecondDerivative() {
+    const dfExpression = document.getElementById('df_expression').value;
+    if (!dfExpression) {
+        calculateDerivativeForInput();
+        setTimeout(() => {
+            const dfExpr = document.getElementById('df_expression').value;
+            fetch('/api/chapter1/derivative', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({expression: dfExpr})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('d2f_expression').value = data.derivative;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+        }, 500);
+    } else {
+        fetch('/api/chapter1/derivative', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({expression: dfExpression})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('d2f_expression').value = data.derivative;
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+}
+
+document.getElementById('methodForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const params = {
+        expression: formData.get('expression'),
+        error_type: formData.get('error_type'),
+        tol: formData.get('tol'),
+        max_iter: formData.get('max_iter'),
+        generate_report: document.getElementById('generate_report').checked
+    };
+
+    const method = formData.get('method');
+
+    if (method === 'bisection' || method === 'false_position') {
+        params.a = formData.get('a');
+        params.b = formData.get('b');
+    } else if (method === 'fixed_point') {
+        params.x0 = formData.get('x0');
+        params.g_expression = formData.get('g_expression') || formData.get('expression');
+    } else if (method === 'newton') {
+        params.x0 = formData.get('x0');
+        params.df_expression = formData.get('df_expression');
+    } else if (method === 'secant') {
+        params.x0 = formData.get('x0');
+        params.x1 = formData.get('x1');
+    } else if (method === 'multiple_roots') {
+        params.x0 = formData.get('x0');
+        params.df_expression = formData.get('df_expression');
+        params.d2f_expression = formData.get('d2f_expression');
+    }
+
+    fetch('/api/chapter1/execute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            method: method,
+            params: params,
+            generate_report: params.generate_report
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayResult(data.result);
+            if (data.result.comparison) {
+                displayReport(data.result.comparison);
+            }
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+});
+
+function displayResult(result) {
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display = 'block';
+    
+    let html = `<h2>Resultados</h2>`;
+    html += `<p><strong>Raíz encontrada:</strong> ${result.root.toFixed(8)}</p>`;
+    html += `<p><strong>Convergió:</strong> ${result.converged ? 'Sí' : 'No'}</p>`;
+    
+    html += `<h3>Tabla de Iteraciones</h3>`;
+    html += `<table class="results-table"><thead><tr>`;
+    
+    if (result.iterations.length > 0) {
+        const firstRow = result.iterations[0];
+        // Mostrar todas las columnas disponibles
+        const columns = Object.keys(firstRow);
+        columns.forEach(col => {
+            html += `<th>${col}</th>`;
+        });
+        html += `</tr></thead><tbody>`;
+        
+        result.iterations.forEach(it => {
+            html += `<tr>`;
+            columns.forEach(col => {
+                const value = it[col];
+                if (typeof value === 'number') {
+                    html += `<td>${value.toFixed(8)}</td>`;
+                } else {
+                    html += `<td>${value}</td>`;
+                }
+            });
+            html += `</tr>`;
+        });
+    }
+    
+    html += `</tbody></table>`;
+    
+    if (result.plot) {
+        html += `<h3>Gráfica</h3>`;
+        html += `<img src="data:image/png;base64,${result.plot}" alt="Gráfica">`;
+    }
+    
+    resultDiv.innerHTML = html;
+}
+
+function displayReport(comparison) {
+    const reportDiv = document.getElementById('report');
+    reportDiv.style.display = 'block';
+    
+    let html = `<h2>Informe Comparativo</h2>`;
+    html += `<table class="results-table"><thead><tr>`;
+    html += `<th>Método</th><th>Raíz</th><th>Iteraciones</th><th>Convergió</th><th>Error Final</th></tr></thead><tbody>`;
+    
+    for (const method in comparison) {
+        if (method !== 'best_method') {
+            const data = comparison[method];
+            if (data.error) {
+                html += `<tr><td>${method}</td><td colspan="4">Error: ${data.error}</td></tr>`;
+            } else {
+                html += `<tr>`;
+                html += `<td>${method}</td>`;
+                html += `<td>${data.root ? data.root.toFixed(8) : 'N/A'}</td>`;
+                html += `<td>${data.iterations || 'N/A'}</td>`;
+                html += `<td>${data.converged ? 'Sí' : 'No'}</td>`;
+                html += `<td>${data.final_error ? data.final_error.toExponential(4) : 'N/A'}</td>`;
+                html += `</tr>`;
+            }
+        }
+    }
+    
+    html += `</tbody></table>`;
+    
+    if (comparison.best_method) {
+        html += `<p><strong>Mejor método:</strong> ${comparison.best_method}</p>`;
+    }
+    
+    reportDiv.innerHTML = html;
+}
+</script>
+{% endblock %}
+

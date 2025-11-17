@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block header %}Capítulo 2: Sistemas Lineales{% endblock %}
+
+{% block content %}
+<div class="chapter-container">
+    <div class="info-section">
+        <h2>Instrucciones</h2>
+        <ul>
+            <li>Ingresa la matriz A del sistema Ax = b</li>
+            <li>Cada fila de la matriz debe estar en una línea separada</li>
+            <li>Los valores de cada fila deben estar separados por espacios</li>
+            <li>Ejemplo para matriz 3x3:</li>
+            <pre>4  -1   0
+-1   4  -1
+ 0  -1   4</pre>
+            <li>Ingresa el vector b separando los valores por espacios</li>
+            <li>Ejemplo: <code>2 2 2</code></li>
+            <li>Opcionalmente ingresa el vector inicial x₀</li>
+            <li>Puedes generar un informe comparativo opcional marcando la casilla correspondiente</li>
+        </ul>
+    </div>
+
+    <div class="form-section">
+        <h2>Parámetros</h2>
+        <form id="methodForm">
+            <div class="form-group">
+                <label for="method">Método:</label>
+                <select id="method" name="method" required>
+                    <option value="jacobi">Jacobi</option>
+                    <option value="gauss_seidel">Gauss-Seidel</option>
+                    <option value="sor">SOR (Successive Over-Relaxation)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="A">Matriz A:</label>
+                <textarea id="A" name="A" rows="7" cols="50" placeholder="4  -1   0
+-1   4  -1
+ 0  -1   4" required></textarea>
+                <small>Máximo 7x7. Una fila por línea, valores separados por espacios</small>
+            </div>
+
+            <div class="form-group">
+                <label for="b">Vector b:</label>
+                <input type="text" id="b" name="b" placeholder="2 2 2" required>
+                <small>Valores separados por espacios</small>
+            </div>
+
+            <div class="form-group">
+                <label for="x0">Vector inicial x₀ (opcional):</label>
+                <input type="text" id="x0" name="x0" placeholder="0 0 0">
+                <small>Si se deja vacío, se usará un vector de ceros</small>
+            </div>
+
+            <div class="form-group" id="wGroup" style="display: none;">
+                <label for="w">Parámetro de relajación ω (para SOR):</label>
+                <input type="number" id="w" name="w" value="1.0" step="0.1" min="0" max="2">
+                <small>Valor típico entre 0 y 2. ω=1 es Gauss-Seidel</small>
+            </div>
+
+            <div class="form-group">
+                <label for="error_type">Tipo de error:</label>
+                <select id="error_type" name="error_type">
+                    <option value="relative">Relativo</option>
+                    <option value="absolute">Absoluto</option>
+                    <option value="condition">Condición (Residual)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="tol">Tolerancia:</label>
+                <input type="number" id="tol" name="tol" value="1e-6" step="any" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="max_iter">Iteraciones máximas:</label>
+                <input type="number" id="max_iter" name="max_iter" value="100" min="1">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="generate_report" name="generate_report">
+                    Generar informe comparativo
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Ejecutar Método</button>
+        </form>
+    </div>
+
+    <div id="result" class="result-section" style="display: none;"></div>
+    <div id="report" class="result-section" style="display: none;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const methodSelect = document.getElementById('method');
+const wGroup = document.getElementById('wGroup');
+
+methodSelect.addEventListener('change', function() {
+    if (this.value === 'sor') {
+        wGroup.style.display = 'block';
+    } else {
+        wGroup.style.display = 'none';
+    }
+});
+
+document.getElementById('methodForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const params = {
+        A: formData.get('A'),
+        b: formData.get('b'),
+        x0: formData.get('x0') || '',
+        error_type: formData.get('error_type'),
+        tol: formData.get('tol'),
+        max_iter: formData.get('max_iter')
+    };
+
+    const method = formData.get('method');
+
+    if (method === 'sor') {
+        params.w = formData.get('w');
+    }
+
+    const generate_report = document.getElementById('generate_report').checked;
+
+    fetch('/api/chapter2/execute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            method: method,
+            params: params,
+            generate_report: generate_report
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayResult(data.result);
+            if (data.result.comparison) {
+                displayReport(data.result.comparison);
+            }
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+});
+
+function displayResult(result) {
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display = 'block';
+    
+    let html = `<h2>Resultados</h2>`;
+    html += `<p><strong>Solución:</strong> [${result.solution.map(x => x.toFixed(8)).join(', ')}]</p>`;
+    html += `<p><strong>Convergió:</strong> ${result.converged ? 'Sí' : 'No'}</p>`;
+    html += `<p><strong>Radio espectral:</strong> ${result.spectral_radius.toFixed(8)}</p>`;
+    html += `<p><strong>¿Puede converger?</strong> ${result.can_converge ? 'Sí (ρ &lt; 1)' : 'No (ρ ≥ 1)'}</p>`;
+    
+    html += `<h3>Tabla de Iteraciones</h3>`;
+    html += `<table class="results-table"><thead><tr>`;
+    html += `<th>Iteración</th>`;
+    
+    if (result.iterations.length > 0) {
+        const firstRow = result.iterations[0];
+        const n = firstRow.x.length;
+        for (let i = 0; i < n; i++) {
+            html += `<th>x${i+1}</th>`;
+        }
+        html += `<th>Error</th><th>Residual</th></tr></thead><tbody>`;
+        
+        result.iterations.forEach(it => {
+            html += `<tr>`;
+            html += `<td>${it.iteration}</td>`;
+            it.x.forEach(x => {
+                html += `<td>${x.toFixed(8)}</td>`;
+            });
+            html += `<td>${it.error.toExponential(4)}</td>`;
+            html += `<td>${it.residual.toExponential(4)}</td>`;
+            html += `</tr>`;
+        });
+    }
+    
+    html += `</tbody></table>`;
+    
+    resultDiv.innerHTML = html;
+}
+
+function displayReport(comparison) {
+    const reportDiv = document.getElementById('report');
+    reportDiv.style.display = 'block';
+    
+    let html = `<h2>Informe Comparativo</h2>`;
+    html += `<table class="results-table"><thead><tr>`;
+    html += `<th>Método</th><th>Solución</th><th>Iteraciones</th><th>Convergió</th><th>Radio Espectral</th><th>Puede Converger</th><th>Error Final</th><th>Residual Final</th></tr></thead><tbody>`;
+    
+    for (const method in comparison) {
+        if (method !== 'best_method') {
+            const data = comparison[method];
+            if (data.error) {
+                html += `<tr><td>${method}</td><td colspan="7">Error: ${data.error}</td></tr>`;
+            } else {
+                html += `<tr>`;
+                html += `<td>${method}</td>`;
+                html += `<td>[${data.solution ? data.solution.map(x => x.toFixed(6)).join(', ') : 'N/A'}]</td>`;
+                html += `<td>${data.iterations || 'N/A'}</td>`;
+                html += `<td>${data.converged ? 'Sí' : 'No'}</td>`;
+                html += `<td>${data.spectral_radius ? data.spectral_radius.toFixed(8) : 'N/A'}</td>`;
+                html += `<td>${data.can_converge ? 'Sí' : 'No'}</td>`;
+                html += `<td>${data.final_error ? data.final_error.toExponential(4) : 'N/A'}</td>`;
+                html += `<td>${data.final_residual ? data.final_residual.toExponential(4) : 'N/A'}</td>`;
+                html += `</tr>`;
+            }
+        }
+    }
+    
+    html += `</tbody></table>`;
+    
+    if (comparison.best_method) {
+        html += `<p><strong>Mejor método:</strong> ${comparison.best_method}</p>`;
+    }
+    
+    reportDiv.innerHTML = html;
+}
+</script>
+{% endblock %}
+

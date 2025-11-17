@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="menu-container">
+    <h2>Selecciona un Capítulo</h2>
+    
+    <div class="chapters-grid">
+        <div class="chapter-card">
+            <h3>Capítulo 1</h3>
+            <p>Búsqueda de Raíces</p>
+            <p class="methods-list">Bisección, Regla Falsa, Punto Fijo, Newton, Secante, Raíces Múltiples</p>
+            <a href="{{ url_for('chapter1_page') }}" class="btn btn-primary">Abrir Capítulo 1</a>
+        </div>
+        
+        <div class="chapter-card">
+            <h3>Capítulo 2</h3>
+            <p>Sistemas Lineales</p>
+            <p class="methods-list">Jacobi, Gauss-Seidel, SOR</p>
+            <a href="{{ url_for('chapter2_page') }}" class="btn btn-primary">Abrir Capítulo 2</a>
+        </div>
+        
+        <div class="chapter-card">
+            <h3>Capítulo 3</h3>
+            <p>Interpolación</p>
+            <p class="methods-list">Vandermonde, Newton, Lagrange, Spline Lineal, Spline Cúbico</p>
+            <a href="{{ url_for('chapter3_page') }}" class="btn btn-primary">Abrir Capítulo 3</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
