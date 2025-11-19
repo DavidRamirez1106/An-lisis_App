@@ -84,7 +84,7 @@ class Chapter1Methods:
             if abs(fc) < tol or error < tol:
                 break
             
-            if f(a) * fc < 0:
+            if fa * fc < 0:
                 b = c
             else:
                 a = c
