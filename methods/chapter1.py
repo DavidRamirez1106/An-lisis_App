@@ -94,7 +94,7 @@ class Chapter1Methods:
         return {
             'root': c,
             'iterations': iterations,
-            'converged': abs(fc) < tol or error < tol
+            'converged': bool(abs(fc) < tol or error < tol)
         }
     
     def false_position(self, f, a, b, tol=1e-6, max_iter=100, error_type='relative'):
@@ -164,7 +164,7 @@ class Chapter1Methods:
         return {
             'root': c,
             'iterations': iterations,
-            'converged': abs(fc) < tol or error < tol
+            'converged': bool(abs(fc) < tol or error < tol)
         }
     
     def fixed_point(self, g, x0, tol=1e-6, max_iter=100, error_type='relative'):
@@ -247,7 +247,7 @@ class Chapter1Methods:
         return {
             'root': x,
             'iterations': iterations,
-            'converged': abs(x - x_prev) < tol or error < tol
+            'converged': bool(abs(x - x_prev) < tol or error < tol)
         }
     
     def newton(self, f, df, x0, tol=1e-6, max_iter=100, error_type='relative'):
@@ -287,7 +287,7 @@ class Chapter1Methods:
         return {
             'root': x,
             'iterations': iterations,
-            'converged': abs(fx) < tol or error < tol
+            'converged': bool(abs(fx) < tol or error < tol)
         }
     
     def secant(self, f, x0, x1, tol=1e-6, max_iter=100, error_type='relative'):
@@ -328,7 +328,7 @@ class Chapter1Methods:
         return {
             'root': x,
             'iterations': iterations,
-            'converged': abs(fx) < tol or error < tol
+            'converged': bool(abs(fx) < tol or error < tol)
         }
     
     def multiple_roots_newton(self, f, df, d2f, x0, tol=1e-6, max_iter=100, error_type='relative'):
@@ -373,7 +373,7 @@ class Chapter1Methods:
         return {
             'root': x,
             'iterations': iterations,
-            'converged': abs(fx) < tol or error < tol
+            'converged': bool(abs(fx) < tol or error < tol)
         }
     
     def plot_function(self, f, root, a=None, b=None, iterations=None):
