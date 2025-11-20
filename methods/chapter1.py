@@ -66,6 +66,9 @@ class Chapter1Methods:
         for i in range(max_iter):
             c = (a + b) / 2
             fc = f(c)
+
+            if np.isnan(fc) or np.isinf(fc):
+                raise ValueError(f"Evaluación inválida en c={c}: f(c)={fc}. Puede haber singularidad en el intervalo.")
             
             if error_type == 'relative':
                 error = abs((b - a) / (2 * c)) if c != 0 else abs(b - a)
@@ -134,6 +137,9 @@ class Chapter1Methods:
 
             c = (a * fb - b * fa) / (fb - fa)
             fc = f(c)
+
+            if np.isnan(fc) or np.isinf(fc):
+                raise ValueError(f"Evaluación inválida en c={c}: f(c)={fc}. Puede haber singularidad en el intervalo.")
 
             if error_type == 'relative':
                 error = abs((c - c_prev) / c) if c != 0 else abs(c - c_prev)
