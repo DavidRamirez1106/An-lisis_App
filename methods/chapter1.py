@@ -94,10 +94,20 @@ class Chapter1Methods:
             else:
                 a = c
         
+        # Calcular tipo de raíz
+        fc_final = f(c)
+        if fc_final == 0:
+            root_type = 'exacta'
+        elif abs(fc_final) < tol or error < tol:
+            root_type = 'aproximada'
+        else:
+            root_type = 'desconocida'
+        
         return {
             'root': c,
             'iterations': iterations,
-            'converged': bool(abs(fc) < tol or error < tol)
+            'converged': bool(abs(fc) < tol or error < tol),
+            'root_type': root_type
         }
     
     def false_position(self, f, a, b, tol=1e-6, max_iter=100, error_type='relative'):
@@ -167,13 +177,23 @@ class Chapter1Methods:
             
             c_prev = c
         
+        # Calcular tipo de raíz
+        fc_final = f(c)
+        if fc_final == 0:
+            root_type = 'exacta'
+        elif abs(fc_final) < tol or error < tol:
+            root_type = 'aproximada'
+        else:
+            root_type = 'desconocida'
+        
         return {
             'root': c,
             'iterations': iterations,
-            'converged': bool(abs(fc) < tol or error < tol)
+            'converged': bool(abs(fc) < tol or error < tol),
+            'root_type': root_type
         }
     
-    def fixed_point(self, g, x0, tol=1e-6, max_iter=100, error_type='relative'):
+    def fixed_point(self, f, g, x0, tol=1e-6, max_iter=100, error_type='relative'):
         """Método de punto fijo"""
         # Validar x0
         try:
@@ -199,10 +219,10 @@ class Chapter1Methods:
                     if np.isnan(x) or np.isinf(x):
                         raise ValueError(f"La función g(x) devuelve un valor no válido en x={x_prev}: {x}")
                     
-                    if abs(x) > MAX_VALUE:
+                    if x > MAX_VALUE:
                         raise ValueError(f"Overflow: el valor de x se volvió demasiado grande ({x}) en la iteración {i+1}. La función g(x) puede no converger.")
                     
-                    if abs(x) < MIN_VALUE:
+                    if x < MIN_VALUE:
                         raise ValueError(f"Underflow: el valor de x se volvió demasiado pequeño ({x}) en la iteración {i+1}.")
                 
             except (OverflowError, FloatingPointError) as e:
@@ -250,10 +270,19 @@ class Chapter1Methods:
             
             x_prev = x
         
+        fx=f(x)
+        if fx == 0:
+            root_type = 'exacta'
+        elif abs(fx) < tol or error < tol:
+            root_type = 'aproximada'
+        else:
+            root_type = 'desconocida'
+        
         return {
             'root': x,
             'iterations': iterations,
-            'converged': bool(abs(x - x_prev) < tol or error < tol)
+            'converged': bool(abs(x - x_prev) < tol or error < tol),
+            'root_type': root_type
         }
     
     def newton(self, f, df, x0, tol=1e-6, max_iter=100, error_type='relative'):
@@ -290,10 +319,20 @@ class Chapter1Methods:
             
             x_prev = x
         
+        # Calcular tipo de raíz
+        fx_final = f(x)
+        if fx_final == 0:
+            root_type = 'exacta'
+        elif abs(fx_final) < tol or error < tol:
+            root_type = 'aproximada'
+        else:
+            root_type = 'desconocida'
+        
         return {
             'root': x,
             'iterations': iterations,
-            'converged': bool(abs(fx) < tol or error < tol)
+            'converged': bool(abs(fx) < tol or error < tol),
+            'root_type': root_type
         }
     
     def secant(self, f, x0, x1, tol=1e-6, max_iter=100, error_type='relative'):
@@ -331,10 +370,20 @@ class Chapter1Methods:
             x_prev = x
             x = x_new
         
+        # Calcular tipo de raíz
+        fx_final = f(x)
+        if fx_final == 0:
+            root_type = 'exacta'
+        elif abs(fx_final) < tol or error < tol:
+            root_type = 'aproximada'
+        else:
+            root_type = 'desconocida'
+        
         return {
             'root': x,
             'iterations': iterations,
-            'converged': bool(abs(fx) < tol or error < tol)
+            'converged': bool(abs(fx) < tol or error < tol),
+            'root_type': root_type
         }
     
     def multiple_roots_newton(self, f, df, d2f, x0, tol=1e-6, max_iter=100, error_type='relative'):
@@ -376,10 +425,20 @@ class Chapter1Methods:
             
             x_prev = x
         
+        # Calcular tipo de raíz
+        fx_final = f(x)
+        if fx_final == 0:
+            root_type = 'exacta'
+        elif abs(fx_final) < tol or error < tol:
+            root_type = 'aproximada'
+        else:
+            root_type = 'desconocida'
+        
         return {
             'root': x,
             'iterations': iterations,
-            'converged': bool(abs(fx) < tol or error < tol)
+            'converged': bool(abs(fx) < tol or error < tol),
+            'root_type': root_type
         }
     
     def plot_function(self, f, root, a=None, b=None, iterations=None):
@@ -450,7 +509,7 @@ class Chapter1Methods:
             g_expr = params.get('g_expression', expression)
             g = self.parse_function(g_expr)
             x0 = float(params['x0'])
-            result = self.fixed_point(g, x0, tol, max_iter, error_type)
+            result = self.fixed_point(f, g, x0, tol, max_iter, error_type)
             result['plot'] = self.plot_function(f, result['root'])
         
         elif method_name == 'newton':

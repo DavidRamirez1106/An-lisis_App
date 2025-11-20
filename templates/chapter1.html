@@ -289,6 +289,7 @@ function displayResult(result) {
     let html = `<h2>Resultados</h2>`;
     html += `<p><strong>Raíz encontrada:</strong> ${result.root.toFixed(8)}</p>`;
     html += `<p><strong>Convergió:</strong> ${result.converged ? 'Sí' : 'No'}</p>`;
+    html += `<p><strong>Tipo de raíz:</strong> ${result.root_type || 'N/A'}</p>`;
     
     html += `<h3>Tabla de Iteraciones</h3>`;
     html += `<table class="results-table"><thead><tr>`;
