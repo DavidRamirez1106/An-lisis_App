@@ -1,6 +1,8 @@
 import numpy as np
 import sympy as sp
 from sympy import sympify, lambdify
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 import base64
@@ -127,14 +129,17 @@ class Chapter1Methods:
         c_prev = a
         
         for i in range(max_iter):
-            c = (a * f(b) - b * f(a)) / (f(b) - f(a))
+            if fb - fa == 0:
+                raise ValueError("f(b) - f(a) es cero. Regla falsa no aplicable")
+
+            c = (a * fb - b * fa) / (fb - fa)
             fc = f(c)
-            
+
             if error_type == 'relative':
                 error = abs((c - c_prev) / c) if c != 0 else abs(c - c_prev)
             elif error_type == 'absolute':
                 error = abs(c - c_prev)
-            else:  # condition
+            else:
                 error = abs(fc)
             
             iterations.append({
